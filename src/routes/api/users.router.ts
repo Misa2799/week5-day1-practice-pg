@@ -14,8 +14,6 @@ export const router = Router();
 router.get("/", async (req: Request, res: Response) => {
   const data = await pool.query<User>("SELECT * FROM users");
   res.json(data.rows);
-
-  console.log("data", data);
 });
 
 router.get("/:id", async (req: Request, res: Response) => {

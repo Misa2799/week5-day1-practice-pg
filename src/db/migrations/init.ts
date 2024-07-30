@@ -15,7 +15,7 @@ const run = async () => {
       password TEXT
     );
 
-    CREATE TABLE cart (
+    CREATE TABLE carts (
       id SERIAL PRIMARY KEY,
       user_id INTEGER,
       title VARCHAR(100),

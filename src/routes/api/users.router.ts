@@ -13,7 +13,7 @@ export const router = Router();
 // /api/v1/users
 router.get("/", async (req: Request, res: Response) => {
   const data = await pool.query<User>("SELECT * FROM users");
-  res.send(data.rows);
+  res.json(data.rows);
 
   console.log("data", data);
 });
@@ -47,27 +47,50 @@ router.post("/", async (req: Request, res: Response) => {
 
 router.put("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
-
   const { name, email, password } = req.body;
-  const response = await pool.query(
-    `UPDATE users SET name = $1, email = $2, password = $3
-    WHERE id = $4 RETURNING *;`,
-    [name, email, password, id]
-  );
 
-  const data = response.rows;
-  res.send(data);
+  try {
+    const response = await pool.query(
+      `UPDATE users SET name = $1, email = $2, password = $3
+    WHERE id = $4 RETURNING *;`,
+      [name, email, password, id]
+    );
+
+    const data = response.rows;
+    if (data.length === 0) {
+      return res
+        .status(404)
+        .json({ error: 404, message: `User with ID ${id} does not exist` });
+    }
+
+    res.status(200).json(data[0]);
+  } catch (error) {
+    console.log("Error deleting user:", error);
+  }
 });
 
 router.delete("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
-  const response = await pool.query(
-    `
+
+  try {
+    const response = await pool.query(
+      `
     DELETE FROM users WHERE id = $1 RETURNING *;
     `,
-    [id]
-  );
+      [id]
+    );
 
-  const data = response.rows;
-  res.send(data);
+    const data = response.rows;
+    if (data.length === 0) {
+      return res
+        .status(404)
+        .json({ error: 404, message: `User with ID ${id} does not exist` });
+    }
+
+    res
+      .status(200)
+      .json({ message: `User with ID ${id} deleted successfully` });
+  } catch (error) {
+    console.log("Error deleting user:", error);
+  }
 });

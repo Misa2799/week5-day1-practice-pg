@@ -29,10 +29,10 @@ router.get("/", async (req: Request, res: Response) => {
 
 // /api/v1/users/:userId/carts/:id
 router.get("/:cartId", async (req: Request, res: Response) => {
-  const { userId, cartId } = req.params;
+  const { user_id, id } = req.params;
 
   const userData = await pool.query(`SELECT * FROM users WHERE id = $1;`, [
-    userId,
+    user_id,
   ]);
 
   const user = userData.rows[0];
@@ -40,13 +40,13 @@ router.get("/:cartId", async (req: Request, res: Response) => {
   if (!user) {
     res
       .status(404)
-      .json({ error: 404, message: `User with ID ${userId} does not exist` });
+      .json({ error: 404, message: `User with ID ${user_id} does not exist` });
     return;
   }
 
   const cartData = await pool.query(
     "SELECT * FROM carts WHERE id = $1 AND user_id = $2",
-    [cartId, userId]
+    [id, user_id]
   );
 
   const cart = cartData.rows[0];
@@ -54,7 +54,7 @@ router.get("/:cartId", async (req: Request, res: Response) => {
   if (!cart) {
     res
       .status(404)
-      .json({ error: 404, message: `User with ID ${cartId} does not exist` });
+      .json({ error: 404, message: `User with ID ${id} does not exist` });
     return;
   }
 
@@ -81,7 +81,7 @@ router.post("/", async (req: Request, res: Response) => {
   const { user_id, title, price, quantity } = req.body;
 
   const cartData = await pool.query(
-    `INSERT INTO users (user_id, title, price, quantity) VALUES ($1, $2, $3, $4) RETURNING *;`,
+    `INSERT INTO carts (user_id, title, price, quantity) VALUES ($1, $2, $3, $4) RETURNING *;`,
     [user_id, title, price, quantity]
   );
   res.json(cartData.rows[0]);
@@ -91,14 +91,16 @@ router.post("/", async (req: Request, res: Response) => {
 router.put("/:cartId", async (req: Request, res: Response) => {
   const { userId, cartId } = req.params;
 
-  const userData = await pool.query("SELECT * FROM users WHERE userId");
+  const userData = await pool.query("SELECT * FROM users WHERE id = $1", [
+    userId,
+  ]);
 
   const user = userData.rows[0];
 
   if (!user) {
     res
       .status(404)
-      .json({ error: 404, message: `user with id ${userId} does not exist` });
+      .json({ error: 404, message: `User with Id ${userId} does not exist` });
     return;
   }
 
@@ -120,7 +122,7 @@ router.put("/:cartId", async (req: Request, res: Response) => {
 
   try {
     const updated = await pool.query(
-      `UPDATE users SET title = $1, price = $2, quantity = $3
+      `UPDATE carts SET title = $1, price = $2, quantity = $3
     WHERE id = $4 AND user_id = $5 RETURNING *;`,
       [title, price, quantity, cartId, userId]
     );
@@ -135,7 +137,9 @@ router.put("/:cartId", async (req: Request, res: Response) => {
 router.delete("/:cartId", async (req: Request, res: Response) => {
   const { userId, cartId } = req.params;
 
-  const userData = await pool.query("SELECT * FROM users WHERE userId");
+  const userData = await pool.query("SELECT * FROM users WHERE id = $1", [
+    userId,
+  ]);
 
   const user = userData.rows[0];
 
@@ -154,9 +158,10 @@ router.delete("/:cartId", async (req: Request, res: Response) => {
   const cart = cartData.rows[0];
 
   if (!cart) {
-    res
-      .status(404)
-      .json({ error: 404, message: `user with id ${cartId} does not exist` });
+    res.status(404).json({
+      error: 404,
+      message: `user with the cart id ${cartId} does not exist`,
+    });
     return;
   }
 
@@ -173,12 +178,10 @@ router.delete("/:cartId", async (req: Request, res: Response) => {
   if (deletedData.rows.length > 1) {
     await client.query("ROLLBACK");
 
-    res
-      .status(500)
-      .json({
-        error: 500,
-        message: `something went wrong while deleting the task with id ${cartId}`,
-      });
+    res.status(500).json({
+      error: 500,
+      message: `something went wrong while deleting the task with id ${cartId}`,
+    });
     return;
   }
 
